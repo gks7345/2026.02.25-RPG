@@ -19,8 +19,8 @@ private:
 	int dex = 0;
 	int def = 0;
 public:
-	Stat() { }
-	Stat(int str, int dex, int def) :str(str), dex(dex), def(def) { }
+	Stat() {}
+	Stat(int str, int dex, int def) :str(str), dex(dex), def(def) {}
 	int getStr() { return str; }
 	int getDex() { return dex; }
 	int getDef() { return def; }
@@ -37,12 +37,12 @@ protected:
 	Category category = Category::no_weapon;
 public:
 	Weapon() {
-		name = "맨손";
+		name = "없음";
 		attack = 0;
 	}
 	Weapon(std::string& name, int attack) :name(name), attack(attack) {}
-	Weapon(std::string& name, int attack, Stat& add_stats) :name(name), attack(attack), add_stats(add_stats){}
-	Weapon(const Weapon& weapon) :name(weapon.name), attack(weapon.attack), add_stats(weapon.add_stats) { }
+	Weapon(std::string& name, int attack, Stat& add_stats) :name(name), attack(attack), add_stats(add_stats) {}
+	Weapon(const Weapon& weapon) :name(weapon.name), attack(weapon.attack), add_stats(weapon.add_stats) {}
 	virtual ~Weapon() = default;
 	int getAttack() { return attack + add_stats.getStr() * 2; }
 	void setName(std::string& name) { Weapon::name = name; }
@@ -61,20 +61,44 @@ public:
 	virtual std::unique_ptr<Weapon> clone() const { return std::make_unique<Weapon>(*this); }
 };
 
-class One_hand_sword: public Weapon {
+class No_weapon : public Weapon {
+public:
+	No_weapon() : Weapon() {
+		name = "맨손";
+		attack = 0;
+		add_stats.setStr(0);
+		add_stats.setDex(0);
+		add_stats.setDef(0);
+		Weapon::category = Category::no_weapon;
+	}
+	No_weapon(int attack, Stat& add_stats) : Weapon() {
+		Weapon::name = "맨손";
+		Weapon::attack = attack;
+		Weapon::add_stats = add_stats;
+		Weapon::category = Category::no_weapon;
+	}
+	No_weapon(std::string name, int attack, Stat& add_stats) : Weapon(name, attack, add_stats) {}
+
+	std::unique_ptr<Weapon> clone() const override {
+		return std::make_unique<No_weapon>(*this);
+	}
+};
+
+class One_hand_sword : public Weapon {
 private:
-	Category category = Category::one_handed_sword;
 public:
 	One_hand_sword() : Weapon() {
 		name = "한손검";
 		attack = 9;
 		add_stats.setStr(3);
 		add_stats.setDex(3);
+		Weapon::category = Category::one_handed_sword;
 	}
 	One_hand_sword(int attack, Stat& add_stats) : Weapon() {
 		Weapon::name = "한손검";
 		Weapon::attack = attack;
 		Weapon::add_stats = add_stats;
+		Weapon::category = Category::one_handed_sword;
 	}
 	One_hand_sword(std::string name, int attack, Stat& add_stats) : Weapon(name, attack, add_stats) {}
 
@@ -83,22 +107,24 @@ public:
 	std::unique_ptr<Weapon> clone() const override {
 		return std::make_unique<One_hand_sword>(*this);
 	}
+
 };
 
 class Arrow : public Weapon {
 private:
-	Category category = Category::arrow;
 public:
 	Arrow() : Weapon() {
 		name = "활";
 		attack = 7;
 		add_stats.setStr(2);
 		add_stats.setDex(4);
+		Weapon::category = Category::arrow;
 	}
 	Arrow(int attack, Stat& add_stats) : Weapon() {
 		Weapon::name = "활";
 		Weapon::attack = attack;
 		Weapon::add_stats = add_stats;
+		Weapon::category = Category::arrow;
 	}
 	Arrow(std::string name, int attack, Stat& add_stats) : Weapon(name, attack, add_stats) {}
 
@@ -106,13 +132,13 @@ public:
 
 	int getWeaponDamage(std::unique_ptr<Weapon>* enemys_weapon) override {
 		int weapon_damage = attack + add_stats.getStr() * 2;
-		if (static_cast<int>(enemys_weapon->get()->getCategory()) == 3 || static_cast<int>(enemys_weapon->get()->getCategory()) == 4) {
+		if (enemys_weapon->get()->getCategory() == Category::axe || enemys_weapon->get()->getCategory() == Category::spear) {
 			std::cout << " -- 5의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 5;
 		}
-		if (static_cast<int>(enemys_weapon->get()->getCategory()) == 5) {
+		if (enemys_weapon->get()->getCategory() == Category::shield) {
 			std::cout << " -- 활의 공격력이 5로 줄어듭니다. -- " << std::endl;
-			return weapon_damage -2;
+			return 5;
 		}
 		return weapon_damage;
 	}
@@ -124,12 +150,12 @@ public:
 
 class Axe : public Weapon {
 private:
-	Category category = Category::axe;
 public:
 	Axe() : Weapon() {
 		name = "도끼";
 		attack = 15;
 		add_stats.setStr(6);
+		Weapon::category = Category::axe;
 	}
 	Axe(int attack, Stat& add_stats) : Weapon() {
 		Weapon::name = "도끼";
@@ -140,13 +166,13 @@ public:
 
 	Category getCategory() override { return Axe::category; }
 
-	int getWeaponDamage (std::unique_ptr<Weapon>* enemys_weapon) override {
+	int getWeaponDamage(std::unique_ptr<Weapon>* enemys_weapon) override {
 		int weapon_damage = attack + add_stats.getStr() * 2;
-		if (static_cast<int>(enemys_weapon->get()->getCategory()) == 2) {
+		if (enemys_weapon->get()->getCategory() == Category::arrow) {
 			std::cout << " -- 7의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 7;
 		}
-		if (static_cast<int>(enemys_weapon->get()->getCategory()) == 5) {
+		if (enemys_weapon->get()->getCategory() == Category::shield) {
 			std::cout << " -- 2의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 2;
 		}
@@ -180,11 +206,11 @@ public:
 
 	int getWeaponDamage(std::unique_ptr<Weapon>* enemys_weapon) override {
 		int weapon_damage = attack + add_stats.getStr() * 2;
-		if (static_cast<int>(enemys_weapon->get()->getCategory()) == 3) {
+		if (enemys_weapon->get()->getCategory() == Category::axe) {
 			std::cout << " -- 4의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 4;
 		}
-		if (static_cast<int>(enemys_weapon->get()->getCategory()) == 5) {
+		if (enemys_weapon->get()->getCategory() == Category::shield) {
 			std::cout << " -- 2의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 2;
 		}
@@ -221,9 +247,11 @@ public:
 class Unit {
 private:
 	std::string name;
-	int hp, unit_attack;
+	int hp;
 	Stat stats;
 	std::unique_ptr<Weapon> current_weapon;
+	std::random_device rd;
+
 
 public:
 	Unit(std::string& name) :name(name) {}
@@ -257,7 +285,6 @@ public:
 	}
 
 	virtual bool evasionAttack() {
-		std::random_device rd;
 		std::mt19937 gen(rd());
 		if (stats.getDex() + current_weapon->getAddStats()->getDex() >= 5) {
 			std::bernoulli_distribution dist(0.5);
@@ -279,7 +306,8 @@ public:
 		}
 		std::cout << " -- " << name << "이(가)" << enemy->getName() << "를(을) 공격합니다." << " -- " << std::endl;
 		std::unique_ptr<Weapon>* enemys_weapon = enemy->getCurrentWeapon();
-		return unit_attack + current_weapon->getWeaponDamage(enemys_weapon);
+
+		return getUnitAttack() + current_weapon->getWeaponDamage(enemys_weapon);
 	}
 
 	virtual void setWeapon(std::unique_ptr<Weapon>&& change_weapon) {
@@ -289,8 +317,8 @@ public:
 		}
 		current_weapon = move(change_weapon);
 	}
-	virtual void getUnitAttack() {
-		unit_attack = stats.getStr() * 2;
+	virtual int getUnitAttack() {
+		return stats.getStr() * 2;
 	}
 	bool isDead() {
 		if (hp <= 0) {
@@ -317,7 +345,7 @@ private:
 	std::vector<std::unique_ptr<Unit>> units;
 	//std::map<std::string, std::unique_ptr<Weapon>> weapons;
 	std::map<std::string, std::shared_ptr<Weapon>> weapons;
-	
+
 	//category categorys;
 public:
 	RPG() {
@@ -325,16 +353,16 @@ public:
 		weapons["맨손"] = std::make_shared<Weapon>();
 	}
 
-	void addWeapon(std::shared_ptr<Weapon> weapon, int idx) {
+	void addWeapon(std::shared_ptr<Weapon> weapon) {
 		weapons[weapon->getName()] = weapon;
 	}
 	void createUnit(std::string name, int hp, Stat stats) {
-		std::cout << " -- " << name <<"를(을) 생성하였습니다." << " -- " << std::endl;
-		units.push_back(std::make_unique<Unit>(name, hp, stats, weapons["맨손"]-> clone()));
+		std::cout << " -- " << name << "를(을) 생성하였습니다." << " -- " << std::endl;
+		units.push_back(std::make_unique<Unit>(name, hp, stats, weapons["맨손"]->clone()));
 	}
-	void createUnit(std::string name, int hp,Stat stats, std::string weaponname) {
+	void createUnit(std::string name, int hp, Stat stats, std::string weaponname) {
 		if (hasWeapon(weaponname)) {
-			std::cout << " -- " << name <<"를(을) 생성하였습니다." << " -- " << std::endl;
+			std::cout << " -- " << name << "를(을) 생성하였습니다." << " -- " << std::endl;
 			units.push_back(std::make_unique<Unit>(name, hp, stats, weapons[weaponname]->clone()));
 			return;
 		}
@@ -349,7 +377,7 @@ public:
 		}
 		if (hasWeapon(weaponname)) {
 			unit->setWeapon(weapons[weaponname]->clone());
-			std::cout << " -- 무기 " << weaponname << " 를(을) 장착하였습니다"<< " -- " << std::endl;;
+			std::cout << " -- 무기 " << weaponname << " 를(을) 장착하였습니다" << " -- " << std::endl;;
 			return;
 		}
 		std::cout << " -- " << "무기 " << weaponname << "이(가) 없습니다. 추가 해주세요." << " -- " << std::endl;
@@ -362,7 +390,7 @@ public:
 			return;
 		}
 		unit->setWeapon(weapons["맨손"]->clone());
-		std::cout << " -- "<< unitname <<" 가 무기를 해제하였습니다" << " -- " << std::endl;;
+		std::cout << " -- " << unitname << " 가 무기를 해제하였습니다" << " -- " << std::endl;;
 	}
 
 	bool hasWeapon(std::string weaponname) {
@@ -392,10 +420,13 @@ public:
 			if (unit->getName() == unitname) {
 				return unit.get();
 			}
-		}return nullptr;
+		}
+		return nullptr;
 	}
 
-	
+	void printUnit(std::string name) {
+		findUnit(name)->printStat();
+	}
 };
 
 int main() {
@@ -405,30 +436,30 @@ int main() {
 	Weapon shield = Shield();
 	Weapon arrow = Arrow();*/
 
-	game.createUnit("Hero", 100, Stat(2,2,2));
-	game.findUnit("Hero")->printStat();
-	game.changeWeapon("Hero","한손검");
-	game.addWeapon(std::make_shared<One_hand_sword>(),0);
-	game.addWeapon(std::make_shared<Arrow>(), 1);
-	game.addWeapon(std::make_shared <Axe>(),2);
-	game.addWeapon(std::make_shared <Spear>(),3);
-	game.addWeapon(std::make_shared <Shield>(),4);
+	game.createUnit("Hero", 100, Stat(2, 2, 2));
+	game.printUnit("Hero");
 	game.changeWeapon("Hero", "한손검");
-	game.findUnit("Hero")->printStat();
+	game.addWeapon(std::make_shared<One_hand_sword>());
+	game.addWeapon(std::make_shared<Arrow>());
+	game.addWeapon(std::make_shared <Axe>());
+	game.addWeapon(std::make_shared <Spear>());
+	game.addWeapon(std::make_shared <Shield>());
+	game.changeWeapon("Hero", "한손검");
+	game.printUnit("Hero");
 	game.changeWeapon("Hero", "도끼");
-	game.findUnit("Hero")->printStat();
+	game.printUnit("Hero");
 
 	game.createUnit("Monster1", 100, Stat(2, 2, 2), "활");
-	game.findUnit("Monster1")->printStat();
+	game.printUnit("Monster1");
 
 	game.attackUnit("Hero", "Monster1");
 	game.attackUnit("Hero", "Monster1");
 	game.attackUnit("Hero", "Monster1");
-	game.findUnit("Monster1")->printStat();
+	game.printUnit("Monster1");
 	game.attackUnit("Monster1", "Hero");
-	
+
 	game.createUnit("Monster2", 100, Stat(2, 2, 2), "방패");
-	game.findUnit("Monster2")->printStat();
+	game.printUnit("Monster2");
 	game.attackUnit("Hero", "Monster2");
 	//game.changeWeapon("Hero", "맨손");
 
