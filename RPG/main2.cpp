@@ -53,7 +53,7 @@ public:
 	Stat* getAddStats() { return &add_stats; }
 	virtual Category getCategory() { return category; }
 
-	virtual int getWeaponDamage(std::unique_ptr<Weapon>* enemys_weapon) {
+	virtual int getWeaponDamage(Category enemys_weapon) {
 		int weapon_damage = attack + add_stats.getStr() * 2;
 		return weapon_damage;
 	}
@@ -130,13 +130,13 @@ public:
 
 	Category getCategory() override { return Arrow::category; }
 
-	int getWeaponDamage(std::unique_ptr<Weapon>* enemys_weapon) override {
+	int getWeaponDamage(Category enemys_weapon) override {
 		int weapon_damage = attack + add_stats.getStr() * 2;
-		if (enemys_weapon->get()->getCategory() == Category::axe || enemys_weapon->get()->getCategory() == Category::spear) {
+		if (enemys_weapon == Category::axe || enemys_weapon == Category::spear) {
 			std::cout << " -- 5의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 5;
 		}
-		if (enemys_weapon->get()->getCategory() == Category::shield) {
+		if (enemys_weapon == Category::shield) {
 			std::cout << " -- 활의 공격력이 5로 줄어듭니다. -- " << std::endl;
 			return 5;
 		}
@@ -166,13 +166,13 @@ public:
 
 	Category getCategory() override { return Axe::category; }
 
-	int getWeaponDamage(std::unique_ptr<Weapon>* enemys_weapon) override {
+	int getWeaponDamage(Category enemys_weapon) override {
 		int weapon_damage = attack + add_stats.getStr() * 2;
-		if (enemys_weapon->get()->getCategory() == Category::arrow) {
+		if (enemys_weapon == Category::arrow) {
 			std::cout << " -- 7의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 7;
 		}
-		if (enemys_weapon->get()->getCategory() == Category::shield) {
+		if (enemys_weapon == Category::shield) {
 			std::cout << " -- 2의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 2;
 		}
@@ -204,13 +204,13 @@ public:
 
 	Category getCategory() override { return Spear::category; }
 
-	int getWeaponDamage(std::unique_ptr<Weapon>* enemys_weapon) override {
+	int getWeaponDamage(Category enemys_weapon) override {
 		int weapon_damage = attack + add_stats.getStr() * 2;
-		if (enemys_weapon->get()->getCategory() == Category::axe) {
+		if (enemys_weapon == Category::axe) {
 			std::cout << " -- 4의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 4;
 		}
-		if (enemys_weapon->get()->getCategory() == Category::shield) {
+		if (enemys_weapon == Category::shield) {
 			std::cout << " -- 2의 추가 데미지를 입힙니다. -- " << std::endl;
 			return weapon_damage + 2;
 		}
@@ -269,7 +269,7 @@ public:
 class Unit {
 private:
 	std::string name;
-	int hp, mp;
+	int current_hp, current_mp;
 	int max_hp, max_mp;
 	Stat stats;
 	std::unique_ptr<Weapon> current_weapon;
@@ -278,23 +278,47 @@ private:
 
 public:
 	Unit(std::string& name) :name(name) {}
-	Unit(std::string& name, int max_hp, int max_mp, Stat& stats) : name(name), max_hp(max_hp), max_mp(max_mp), stats(stats) {
-		hp = max_hp;
-		mp = max_mp;
+	Unit(std::string& name, int max_hp, int max_mp, const Stat& stats) : name(name), max_hp(max_hp), max_mp(max_mp), stats(stats) {
+		current_hp = max_hp;
+		current_mp = max_mp;
 	}
-	Unit(std::string& name, int max_hp, int max_mp, Stat& stats, std::unique_ptr<Weapon> weapon) : name(name), max_hp(max_hp), max_mp(max_mp), stats(stats) {
+	Unit(std::string& name, int max_hp, int max_mp, const Stat& stats, std::unique_ptr<Weapon> weapon) : name(name), max_hp(max_hp), max_mp(max_mp), stats(stats) {
 		current_weapon = move(weapon);
-		hp = max_hp;
-		mp = max_mp;
+		current_hp = max_hp;
+		current_mp = max_mp;
 	}
 	std::string getName() { return name; }
-	int getHp() { return hp; }
+	int getCurrentHp() { return current_hp; }
 	int getMaxHp() { return max_hp; }
-	void setHp(int new_hp) { hp = new_hp; }
-	virtual std::unique_ptr<Weapon>* getCurrentWeapon() {
-		return &current_weapon;
+	void setCurrentHp(int new_hp) {
+		if (new_hp < 0) {
+			current_hp = 0;
+			return;
+		}
+		if (new_hp > max_hp) {
+			current_hp = max_hp;
+			return;
+		}
+		current_hp = new_hp;
 	}
-	virtual void attackedDamage(int damage) {
+	int getCurrentMp() { return current_mp; }
+	void setCurrentMp(int new_mp) {
+		if (new_mp < 0) {
+			current_hp = 0;
+			return;
+		}
+		if (new_mp > max_hp) {
+			current_mp = max_mp;
+			return;
+		}
+		current_mp = new_mp;
+	}
+
+	Category getCurrentWeaponCategory() {
+		return current_weapon->getCategory();
+	}
+
+	void attackedDamage(int damage) {
 		if (damage == 0) {
 			return;
 		}
@@ -307,16 +331,16 @@ public:
 		std::cout << " -- " << name << "이(가) " << stats.getDef() << "만큼 방어했습니다. -- " << std::endl;
 		if (stats.getDef() >= damage) { damage = 1; }
 		else { damage -= stats.getDef(); }
-		hp -= damage;
+		current_hp -= damage;
 		std::cout << " -- " << name << "이(가) " << damage << " 데미지를 입었습니다. " << std::endl;
-		std::cout << " -- " << name << " 남은 HP : " << hp << std::endl;
+		std::cout << " -- " << name << " 남은 HP : " << current_hp << std::endl;
 
 		if (isDead()) {
 			std::cout << " -- " << name << "이(가) 사망하였습니다." << " -- " << std::endl;
 		}
 	}
 
-	virtual bool evasionAttack() {
+	bool evasionAttack() {
 		std::mt19937 gen(rd());
 		if (stats.getDex() + current_weapon->getAddStats()->getDex() >= 5) {
 			std::bernoulli_distribution dist(0.5);
@@ -327,7 +351,7 @@ public:
 		return dist(gen);
 	}
 
-	virtual int attackDamage(Unit* enemy) {
+	int attackDamage(Unit* enemy) {
 		if (isDead()) {
 			std::cout << " -- " << name << "이(가) 이미 사망하여 공격할 수 없습니다." << " -- " << std::endl;
 			return 0;
@@ -337,23 +361,23 @@ public:
 			return 0;
 		}
 		std::cout << " -- " << name << "이(가)" << enemy->getName() << "를(을) 공격합니다." << " -- " << std::endl;
-		std::unique_ptr<Weapon>* enemys_weapon = enemy->getCurrentWeapon();
+		Category enemys_weapon = enemy->getCurrentWeaponCategory();
 
 		return getUnitAttack() + current_weapon->getWeaponDamage(enemys_weapon);
 	}
 
-	virtual void setWeapon(std::unique_ptr<Weapon>&& change_weapon) {
+	void setWeapon(std::unique_ptr<Weapon>&& change_weapon) {
 		if (isDead()) {
 			std::cout << " -- " << name << "이(가) 이미 사망하여 무기를 교체할 수 없습니다." << " -- " << std::endl;
 			return;
 		}
 		current_weapon = move(change_weapon);
 	}
-	virtual int getUnitAttack() {
+	int getUnitAttack() {
 		return stats.getStr() * 2;
 	}
 	bool isDead() {
-		if (hp <= 0) {
+		if (current_hp <= 0) {
 			return true;
 		}
 		return false;
@@ -374,26 +398,19 @@ public:
 			std::cout << " -- " << name << "이(가) 이미 사망하여 스킬을 사용할 수 없습니다." << " -- " << std::endl;
 			return;
 		}
-
-		int cost_hp = skill->getCostHp();
-		int cost_mp = skill->getCostMp();
-
-		if (hp < cost_hp && mp < cost_mp) {
-			std::cout << " -- HP와 MP가 부족하여 스킬을 사용할 수 없습니다. -- " << std::endl;;
+		if (target->isDead()) {
+			std::cout << " -- 대상 유닛 " << target->getName() << "이(가) 이미 사망하였습니다." << " -- " << std::endl;
 			return;
 		}
-		if (hp < cost_hp && cost_hp > 0) {
-			std::cout << " -- HP가 부족하여 스킬을 사용할 수 없습니다. -- " << std::endl;
-			return;
-		}
-		if (mp < cost_mp && cost_mp > 0) {
+		if (getCurrentMp() < skill->getCostMp() && skill->getCostMp() > 0) {
 			std::cout << " -- MP가 부족하여 스킬을 사용할 수 없습니다. -- " << std::endl;
 			return;
 		}
+		if (getCurrentHp() < skill->getCostHp() && skill->getCostHp() > 0) {
+			std::cout << " -- HP가 부족하여 스킬을 사용할 수 없습니다. -- " << std::endl;
+			return;
+		}
 
-		std::cout << " -- " << name << "이(가) " << target->getName() << "에게 " << skill_name << "스킬을 사용합니다. -- " << std::endl;
-		mp -= cost_mp;
-		hp -= cost_hp;
 		skill->activeSkill(this, target);
 	}
 
@@ -406,10 +423,10 @@ public:
 		return nullptr;
 	}
 
-	virtual void printStat() {
+	void printStat() {
 		std::cout << " [" << name << "] " << std::endl;
-		std::cout << "HP : " << hp << " / " << max_hp << std::endl;
-		std::cout << "MP : " << mp << " / " << max_mp << std::endl;
+		std::cout << "HP : " << current_hp << " / " << max_hp << std::endl;
+		std::cout << "MP : " << current_mp << " / " << max_mp << std::endl;
 		std::cout << "힘 : " << stats.getStr() << std::endl;
 		std::cout << "민첩 : " << stats.getDex() << std::endl;
 		std::cout << "방어 : " << stats.getDef() << std::endl;
@@ -427,7 +444,7 @@ public:
 	Fireball() {
 		Skill::name = "Fireball";
 		Skill::cost_hp = 0;
-		Skill::cost_mp = 10;
+		Skill::cost_mp = 20;
 		Skill::damage = 20;
 	}
 	void activeSkill(Unit* caster, Unit* target) override {
@@ -435,11 +452,9 @@ public:
 			std::cout << " -- 자신을 공격할 수 없습니다. -- " << std::endl;
 			return;
 		}
-		if (target->isDead()) {
-			std::cout << " -- " << target->getName() << "이(가) 이미 사망하였습니다." << " -- " << std::endl;
-			return;
-		}
 
+		std::cout << " -- " << caster->getName() << "이(가) " << target->getName() << "에게 " << name << "스킬을 사용합니다. -- " << std::endl;
+		caster->setCurrentMp(caster->getCurrentMp() - cost_mp);
 		std::cout << " -- MP " << cost_mp << "가 사용됩니다. --" << std::endl;
 		target->attackedDamage(damage);
 	}
@@ -463,21 +478,20 @@ public:
 			std::cout << " -- 자신을 공격할 수 없습니다. -- " << std::endl;
 			return;
 		}
-		if (target->isDead()) {
-			std::cout << " -- " << target->getName() << "이(가) 이미 사망하였습니다." << " -- " << std::endl;
-			return;
-		}
 
-		if (target->getCurrentWeapon()->get()->getCategory() == Category::shield) {
+		std::cout << " -- " << caster->getName() << "이(가) " << target->getName() << "에게 " << name << "스킬을 사용합니다. -- " << std::endl;
+		caster->setCurrentHp(caster->getCurrentHp() - cost_hp);
+		caster->setCurrentMp(caster->getCurrentMp() - cost_mp);
+		std::cout << " -- HP " << cost_hp << " , MP " << cost_mp << "가 소모됩니다. --" << std::endl;
+
+		if (target->getCurrentWeaponCategory() == Category::shield) {
 			std::cout << " -- 스킬 위력이 30에서 40으로 증가 합니다. --" << std::endl;
 			target->attackedDamage(40);
 			return;
 		}
-		std::cout << " -- HP " << cost_hp << "가 사용됩니다. --" << std::endl;
-		std::cout << " -- MP " << cost_mp << "가 사용됩니다. --" << std::endl;
 		target->attackedDamage(damage);
 	}
-	virtual std::unique_ptr<Skill> clone() {
+	std::unique_ptr<Skill> clone() override {
 		return std::make_unique<PowerStrike>(*this);
 	}
 };
@@ -495,17 +509,16 @@ public:
 			std::cout << " -- 자신을 공격할 수 없습니다. -- " << std::endl;
 			return;
 		}
-		if (target->isDead()) {
-			std::cout << " -- " << target->getName() << "이(가) 이미 사망하였습니다." << " -- " << std::endl;
-			return;
-		}
 
-		if (target->getCurrentWeapon()->get()->getCategory() == Category::shield) {
+		std::cout << " -- " << caster->getName() << "이(가) " << target->getName() << "에게 " << name << "스킬을 사용합니다. -- " << std::endl;
+		caster->setCurrentMp(caster->getCurrentMp() - cost_mp);
+		std::cout << " -- MP " << cost_mp << "가 소모됩니다. --" << std::endl;
+
+		if (target->getCurrentWeaponCategory() == Category::shield) {
 			std::cout << " -- 스킬 위력이 25에서 10으로 감소 합니다. --" << std::endl;
 			target->attackedDamage(10);
 			return;
 		}
-		std::cout << " -- MP " << cost_mp << "가 사용됩니다. --" << std::endl;
 		target->attackedDamage(damage);
 	}
 	std::unique_ptr<Skill> clone() override {
@@ -525,24 +538,18 @@ public:
 		heal_hp = 40;
 	}
 	void activeSkill(Unit* caster, Unit* target) override {
-		if (caster->isDead()) {
-			std::cout << " -- 시전 유닛 " << caster->getName() << "이(가) 이미 사망하였습니다." << " -- " << std::endl;
-			return;
-		}
-
 		int max_hp = target->getMaxHp();
-		int current_hp = target->getHp();
-		if (target->getHp() == max_hp) {
+		int current_hp = target->getCurrentHp();
+		if (target->getCurrentHp() == max_hp) {
 			std::cout << " -- 대상의 HP가 가득 차 있습니다. --" << std::endl;
 			return;
 		}
-		std::cout << " -- MP " << cost_mp << "가 사용됩니다. --" << std::endl;
+
+		std::cout << " -- MP " << cost_mp << "가 소모됩니다. --" << std::endl;
+		caster->setCurrentMp(caster->getCurrentMp() - cost_mp);
+
 		std::cout << " -- 유닛 " << target->getName() << "이(가) 체력을 40 회복합니다. -- " << std::endl;
-		if (target->getHp() + heal_hp > max_hp) {
-			target->setHp(max_hp);
-			return;
-		}
-		target->setHp(current_hp + 40);
+		target->setCurrentHp(current_hp + 40);
 	}
 	std::unique_ptr<Skill> clone() override {
 		return std::make_unique<Heal>(*this);
@@ -570,11 +577,11 @@ public:
 	void addWeapon(std::shared_ptr<Weapon> weapon) {
 		weapons[weapon->getName()] = weapon;
 	}
-	void createUnit(std::string name, int hp, int mp, Stat stats) {
+	void createUnit(std::string name, int hp, int mp, const Stat& stats) {
 		std::cout << " -- " << name << "를(을) 생성하였습니다." << " -- " << std::endl;
 		units.push_back(std::make_unique<Unit>(name, hp, mp, stats, weapons["맨손"]->clone()));
 	}
-	void createUnit(std::string name, int hp, int mp, Stat stats, std::string weaponname) {
+	void createUnit(std::string name, int hp, int mp, const Stat& stats, std::string weaponname) {
 		if (hasWeapon(weaponname)) {
 			std::cout << " -- " << name << "를(을) 생성하였습니다." << " -- " << std::endl;
 			units.push_back(std::make_unique<Unit>(name, hp, mp, stats, weapons[weaponname]->clone()));
@@ -639,7 +646,11 @@ public:
 	}
 
 	void printUnit(std::string name) {
-		findUnit(name)->printStat();
+		Unit* unit = findUnit(name);
+		if (unit == nullptr) {
+			return;
+		}
+		unit->printStat();
 	}
 
 	void addSkillToUnit(std::string nunitname, std::string skillname) {
